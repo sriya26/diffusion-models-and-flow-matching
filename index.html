@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HW5: Diffusion Models — COMS 4732</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #18181f;
+    --border: #2a2a38;
+    --accent: #7b6cff;
+    --accent2: #ff6c8a;
+    --accent3: #6cffcc;
+    --text: #e8e8f0;
+    --muted: #7070a0;
+    --mono: 'DM Mono', monospace;
+    --serif: 'Fraunces', serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 14px; line-height: 1.7; }
+
+  .hero {
+    min-height: 100vh; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; text-align: center;
+    padding: 60px 20px; position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 30%, rgba(123,108,255,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 80% 70%, rgba(255,108,138,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 50% 10%, rgba(108,255,204,0.06) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .hero-tag { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); border: 1px solid rgba(123,108,255,0.3); padding: 4px 14px; border-radius: 2px; margin-bottom: 32px; }
+  .hero h1 { font-family: var(--serif); font-size: clamp(2.5rem, 7vw, 5.5rem); font-weight: 700; line-height: 1.05; margin-bottom: 16px; letter-spacing: -0.02em; }
+  .hero h1 span { color: var(--accent); font-style: italic; }
+  .hero-student { font-family: var(--serif); font-size: clamp(0.9rem, 2.2vw, 1.4rem); font-weight: 300; color: var(--muted); margin-bottom: 12px; }
+  .hero-sub { color: var(--muted); font-size: 13px; margin-bottom: 48px; letter-spacing: 0.05em; }
+  .hero-meta { display: flex; gap: 40px; font-size: 12px; color: var(--muted); }
+  .hero-meta strong { color: var(--text); }
+
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,10,15,0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border); padding: 0 40px;
+    display: flex; align-items: center; gap: 4px; height: 48px; overflow-x: auto;
+  }
+  nav a { color: var(--muted); text-decoration: none; font-size: 12px; letter-spacing: 0.05em; padding: 6px 14px; border-radius: 2px; white-space: nowrap; transition: color 0.15s, background 0.15s; }
+  nav a:hover { color: var(--text); background: var(--surface2); }
+  nav .nav-sep { color: var(--border); padding: 0 4px; }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 32px; }
+
+  .part-header { padding: 80px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 64px; }
+  .part-label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent2); margin-bottom: 12px; }
+  .part-header h2 { font-family: var(--serif); font-size: clamp(1.8rem, 4vw, 3rem); font-weight: 300; font-style: italic; line-height: 1.2; }
+  .part-header p { color: var(--muted); margin-top: 16px; max-width: 680px; font-size: 13px; }
+
+  .section { margin-bottom: 80px; }
+  .section-header { display: flex; align-items: baseline; gap: 16px; margin-bottom: 28px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .section-num { font-size: 11px; color: var(--accent); font-weight: 500; letter-spacing: 0.1em; flex-shrink: 0; }
+  .section-header h3 { font-family: var(--serif); font-size: 1.4rem; font-weight: 300; }
+  .section p, .section li { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+  .section ul { padding-left: 20px; margin-bottom: 16px; }
+
+  .img-row { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0; }
+  .img-row.center { justify-content: center; }
+  .img-card { flex: 1; min-width: 140px; max-width: 240px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .img-card.wide { max-width: 340px; }
+  .img-card img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: var(--surface2); }
+  .img-card .cap { padding: 8px 10px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--border); letter-spacing: 0.03em; }
+
+  .prog-row { display: flex; gap: 8px; margin: 20px 0; flex-wrap: wrap; }
+  .prog-item { flex: 1; min-width: 100px; text-align: center; }
+  .prog-item img { width: 100%; aspect-ratio: 1; object-fit: cover; border: 1px solid var(--border); border-radius: 3px; background: var(--surface2); display: block; }
+  .prog-item .plabel { font-size: 10px; color: var(--accent); margin-top: 5px; letter-spacing: 0.05em; }
+
+  /* source image row: fixed small size, no stretch */
+  .source-row { display: flex; gap: 16px; margin: 16px 0 4px; flex-wrap: wrap; }
+  .source-item { text-align: center; }
+  .source-item img { width: 120px; height: 120px; object-fit: cover; border: 1px solid var(--border); border-radius: 3px; background: var(--surface2); display: block; }
+  .source-item .slabel { font-size: 10px; color: var(--muted); margin-top: 5px; letter-spacing: 0.03em; }
+
+  .compare-grid { display: grid; gap: 16px; margin: 20px 0; }
+  .compare-grid.cols3 { grid-template-columns: repeat(3, 1fr); }
+  .compare-grid.cols2 { grid-template-columns: repeat(2, 1fr); }
+  .compare-grid.cols4 { grid-template-columns: repeat(4, 1fr); }
+  .compare-item img { width: 100%; aspect-ratio: 1; object-fit: cover; border: 1px solid var(--border); border-radius: 3px; background: var(--surface2); display: block; }
+  .compare-item .clabel { font-size: 11px; color: var(--muted); margin-top: 6px; text-align: center; }
+
+  .anagram-pair { display: flex; gap: 16px; margin: 16px 0; align-items: flex-start; }
+  .anagram-pair .side { flex: 1; text-align: center; }
+  .anagram-pair img { width: 100%; max-width: 220px; aspect-ratio: 1; object-fit: cover; border: 1px solid var(--border); border-radius: 3px; background: var(--surface2); }
+  .anagram-pair .alabel { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .anagram-pair .alabel em { color: var(--accent3); font-style: normal; }
+
+  .curve-img { width: 100%; border: 1px solid var(--border); border-radius: 4px; background: var(--surface2); display: block; margin: 16px 0; }
+
+  .callout { background: var(--surface); border-left: 2px solid var(--accent); padding: 14px 18px; margin: 20px 0; font-size: 13px; color: var(--muted); border-radius: 0 3px 3px 0; }
+  .callout strong { color: var(--text); }
+
+  .samples-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 20px 0; }
+  .samples-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border: 1px solid var(--border); border-radius: 3px; background: var(--surface2); }
+
+  .epoch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 20px 0; }
+  .epoch-card { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .epoch-card img { width: 100%; object-fit: contain; background: var(--surface2); display: block; }
+  .epoch-card .ecap { padding: 8px 12px; font-size: 11px; color: var(--accent); border-top: 1px solid var(--border); letter-spacing: 0.05em; }
+
+  .sub-label { margin-top: 28px; margin-bottom: 10px; color: var(--text); font-size: 12px; display: flex; align-items: center; gap: 10px; }
+  .sub-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 80px 0; }
+  footer { text-align: center; padding: 40px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--border); letter-spacing: 0.1em; }
+
+  .fade-in { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease; }
+  .fade-in.visible { opacity: 1; transform: none; }
+
+  @media (max-width: 700px) {
+    .compare-grid.cols3 { grid-template-columns: repeat(2, 1fr); }
+    .compare-grid.cols4 { grid-template-columns: repeat(2, 1fr); }
+    .samples-grid { grid-template-columns: repeat(3, 1fr); }
+    .epoch-grid { grid-template-columns: repeat(2, 1fr); }
+    .hero-meta { flex-direction: column; gap: 8px; }
+    nav { padding: 0 16px; }
+    .container { padding: 0 16px; }
+    .source-item img { width: 80px; height: 80px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-tag">COMS 4732W · Computer Vision 2 · HW5</div>
+  <h1>Diffusion Models<br><span>&amp; Flow Matching</span></h1>
+  <p class="hero-student"><strong>Sriya Rallabandi</strong> · <strong>sr4326</strong></p>
+  <div class="hero-sub">Part A: Pre-trained Diffusion &nbsp;·&nbsp; Part B: Flow Matching from Scratch</div>
+  <div class="hero-meta">
+    <div><strong>Seed</strong> &nbsp;100</div>
+    <div><strong>Model</strong> &nbsp;DeepFloyd IF-I-L-v1.0</div>
+    <div><strong>Part B Dataset</strong> &nbsp;MNIST</div>
+  </div>
+</section>
+
+<!-- NAV -->
+<nav>
+  <a href="#part-a">Part A</a>
+  <span class="nav-sep">·</span>
+  <a href="#s0">0</a>
+  <a href="#s11">1.1</a><a href="#s12">1.2</a><a href="#s13">1.3</a>
+  <a href="#s14">1.4</a><a href="#s15">1.5</a><a href="#s16">1.6</a>
+  <a href="#s17">1.7</a><a href="#s171">1.7.1</a><a href="#s172">1.7.2</a>
+  <a href="#s173">1.7.3</a><a href="#s18">1.8</a><a href="#s19">1.9</a>
+  <span class="nav-sep">·</span>
+  <a href="#part-b">Part B</a>
+  <span class="nav-sep">·</span>
+  <a href="#b11">B1.1</a><a href="#b12">B1.2</a><a href="#b21">B2.1</a><a href="#b22">B2.4</a><a href="#b23">B&amp;W</a>
+</nav>
+
+<!-- ═══════════════ PART A ═══════════════ -->
+<div id="part-a">
+<div class="container">
+
+  <div class="part-header fade-in">
+    <div class="part-label">Part A</div>
+    <h2>The Power of Diffusion Models</h2>
+    <p>Using the pre-trained DeepFloyd IF model to implement sampling loops, inpainting, image-to-image translation, visual anagrams, and hybrid images.</p>
+  </div>
+
+  <!-- Part 0 -->
+  <div id="s0" class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">PART 0</span>
+      <h3>Text-to-Image Sampling</h3>
+    </div>
+    <p>Three custom prompts sampled using DeepFloyd stage 1 (64×64) upsampled via stage 2 (256×256). Seed: <strong>100</strong>. Tested at <code>num_inference_steps=20</code> and <code>5</code> to compare quality vs. speed.</p>
+    <div class="img-row">
+      <div class="img-card wide">
+        <img src="assets/part_a/upsampled_stage1_1_256x256.png" alt="Prompt 1 — futuristic city">
+        <div class="cap">"a cinematic shot of a futuristic floating city above the ocean at sunset" · steps=20</div>
+      </div>
+      <div class="img-card wide">
+        <img src="assets/part_a/upsampled_stage1_2_256x256.png" alt="Prompt 2 — Tokyo cafe">
+        <div class="cap">"a cozy cafe scene in tokyo during rain, neon reflections, anime style" · steps=20</div>
+      </div>
+      <div class="img-card wide">
+        <img src="assets/part_a/upsampled_stage1_3_256x256.png" alt="Prompt 3 — melting clocks">
+        <div class="cap">"a surreal painting of giant clocks melting over a desert with purple skies" · steps=20</div>
+      </div>
+    </div>
+    <div class="callout">
+      <strong>Reflection:</strong> At steps=20 the model produces coherent, detailed scenes well-aligned with each prompt. Reducing to steps=5 results in blurrier, less detailed outputs with weaker prompt adherence — demonstrating the quality vs. speed trade-off inherent to iterative diffusion sampling.
+    </div>
+  </div>
+
+  <!-- 1.1 -->
+  <div id="s11" class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">1.1</span>
+      <h3>Implementing the Forward Process</h3>
+    </div>
+    <p>Forward process: <code>x_t = √ᾱ_t · x₀ + √(1−ᾱ_t) · ε</code> where ε ∼ N(0, I). As t increases, the signal is progressively overwhelmed by Gaussian noise. Images upsampled to 256×256 via stage 2.</p>
+    <div class="prog-row">
+      <div class="prog-item">
+        <img src="assets/part_a/campanile.jpg" alt="Original Campanile">
+        <div class="plabel">Original</div>
+      </div>
+      <div class="prog-item">
+        <img src="assets/part_a/noisy_campanile_256_t250.png" alt="Noisy t=250">
+        <div class="plabel">t = 250</div>
+      </div>
+      <div class="prog-item">
+        <img src="assets/part_a/noisy_campanile_256_t500.png" alt="Noisy t=500">
+        <div class="plabel">t = 500</div>
+      </div>
+      <div class="prog-item">
+        <img src="assets/part_a/noisy_campanile_256_t750.png" alt="Noisy t=750">
+        <div class="plabel">t = 750</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1.2 -->
+  <div id="s12" class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">1.2</span>
+      <h3>Classical Denoising</h3>
+    </div>
+    <p>Gaussian blur (kernel=5, σ=2) applied to noisy images. Works partially at low noise but fails completely at high noise levels — the blurring smears rather than restores structure. This motivates the learned diffusion approach.</p>
+    <div class="compare-grid cols3">
+      <div class="compare-item">
+        <img src="assets/part_a/noisy_campanile_256_t250.png" alt="Noisy t=250">
+        <div class="clabel">Noisy · t=250</div>
+      </div>
+      <div class="compare-item">
+        <img src="assets/part_a/noisy_campanile_256_t500.png" alt="Noisy t=500">
+        <div class="clabel">Noisy · t=500</div>
+      </div>
+      <div class="compare-item">
+        <img src="assets/part_a/noisy_campanile_256_t750.png" alt="Noisy t=750">
+        <div class="clabel">Noisy · t=750</div>
+      </div>
+      <div class="compare-item">
+        <img src="assets/part_a/gaussian_blurred_256_t250.png" alt="Gaussian t=250">
+        <div class="clabel">Gaussian blur · t=250</div>
+      </div>
+      <div class="compare-item">
+        <img src="assets/part_a/gaussian_blurred_256_t500.png" alt="Gaussian t=500">
+        <div class="clabel">Gaussian blur · t=500</div>
+      </div>
+      <div class="compare-item">
+        <img src="assets/part_a/gaussian_blurred_256_t750.png" alt="Gaussian t=750">
+        <div class="clabel">Gaussian blur · t=750</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1.3 -->
+  <div id="s13" class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">1.3</span>
+      <h3>One-Step Denoising</h3>
+    </div>
+    <p>The pretrained UNet predicts noise ε̂ in a single forward pass. Clean estimate: <code>x̂₀ = (x_t − √(1−ᾱ_t)·ε̂) / √ᾱ_t</code>. Results degrade significantly at higher t — too much information has been destroyed for a single step to recover.</p>
+    <div class="compare-grid cols3">
+      <div class="compare-item">
+        <img src="assets/part_a/one_step_denoised_256_t250.png" alt="One-step t=250">
+        <div class="clabel">One-step · t=250</div>
+      </div>
+      <div class="compare-item">
+        <img src="assets/part_a/one_step_denoised_256_t500.png" alt="One-step t=500">
+        <div class="clabel">One-step · t=500</div>
+      </div>
+      <div class="compare-item">
+        <img src="assets/part_a/one_step_denoised_256_t750.png" alt="One-step t=750">
+        <div class="clabel">One-step · t=750</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1.4 -->
+  <div id="s14" class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">1.4</span>
+      <h3>Iterative Denoising</h3>
+    </div>
+    <p>Strided timesteps 990→0 (stride 30, 34 steps total). Starting at <code>i_start=10</code> (t=690). DDPM update rule: <code>x_t' = (√ᾱ_t'·β_t)/(1−ᾱ_t)·x̂₀ + (√α_t·(1−ᾱ_t'))/(1−ᾱ_t)·x_t + v_σ</code>, where learned variance v_σ is added at each step.</p>
+
+    <p class="sub-label">Comparison — iterative vs one-step vs Gaussian</p>
+    <div class="compare-grid cols4">
+      <div class="compare-item">
+        <img src="assets/part_a/campanile.jpg" alt="Original">
+        <div class="clabel">Original</div>
+      </div>
+      <div class="compare-item">
+        <img src="assets/part_a/iterative_denoised_256_t690.png" alt="Iterative">
+        <div class="clabel">Iterative denoising</div>
+      </div>
+      <div class="compare-item">
+        <img src="assets/part_a/one_step_denoised_256_t690.png" alt="One-step">
+        <div class="clabel">One-step denoising</div>
+      </div>
+      <div class="compare-item">
+        <img src="assets/part_a/gaussian_blurred_256_t690.png" alt="Gaussian">
+        <div class="clabel">Gaussian blur</div>
+      </div>
+    </div>
+    <div class="callout">
+      <strong>Observation:</strong> Iterative denoising produces significantly sharper, more realistic results than both one-step denoising and Gaussian blur at the same noise level (t=690). Each DDPM step makes a small, stable correction — the accumulated effect recovers fine detail that a single step cannot.
+    </div>
+  </div>
+
+  <!-- 1.5 -->
+  <div id="s15" class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">1.5</span>
+      <h3>Diffusion Model Sampling</h3>
+    </div>
+    <p>Five images generated from pure Gaussian noise with prompt <em>"a high quality photo"</em>, no CFG (γ=1), starting from <code>i_start=0</code>. Quality is limited without guidance — the model explores diverse but often incoherent outputs.</p>
+    <div class="samples-grid">
+      <img src="assets/part_a/a_1_5_sample_1.png" alt="Sample 1">
+      <img src="assets/part_a/a_1_5_sample_2.png" alt="Sample 2">
+      <img src="assets/part_a/a_1_5_sample_3.png" alt="Sample 3">
+      <img src="assets/part_a/a_1_5_sample_4.png" alt="Sample 4">
+      <img src="assets/part_a/a_1_5_sample_5.png" alt="Sample 5">
+    </div>
+  </div>
+
+  <!-- 1.6 -->
+  <div id="s16" class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">1.6</span>
+      <h3>Classifier-Free Guidance (CFG)</h3>
+    </div>
+    <p>CFG formula: <code>ε = εᵤ + γ(εc − εᵤ)</code> with γ=7. Both runs use the same prompt <em>"a high quality photo"</em>. CFG dramatically sharpens results by amplifying the direction the conditional score differs from the unconditional one.</p>
+    <div class="samples-grid">
+      <img src="assets/part_a/a_1_6_cfg_1.png" alt="CFG 1">
+      <img src="assets/part_a/a_1_6_cfg_2.png" alt="CFG 2">
+      <img src="assets/part_a/a_1_6_cfg_3.png" alt="CFG 3">
+      <img src="assets/part_a/a_1_6_cfg_4.png" alt="CFG 4">
+      <img src="assets/part_a/a_1_6_cfg_5.png" alt="CFG 5">
+    </div>
+  </div>
+
+  <!-- 1.7 -->
+  <div id="s17" class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">1.7</span>
+      <h3>Image-to-Image Translation (SDEdit)</h3>
+    </div>
+    <p>Campanile noised to t = strided_timesteps[i_start], then denoised with CFG (prompt: <em>"a high quality photo"</em>). Lower <code>i_start</code> adds more noise → larger creative edit. Higher <code>i_start</code> adds less noise → output stays closer to the original.</p>
+    <div class="prog-row">
+      <div class="prog-item"><img src="assets/part_a/a_1_7_campanile_1.png" alt="i=1"><div class="plabel">i_start=1</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_campanile_3.png" alt="i=3"><div class="plabel">i_start=3</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_campanile_5.png" alt="i=5"><div class="plabel">i_start=5</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_campanile_7.png" alt="i=7"><div class="plabel">i_start=7</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_campanile_10.png" alt="i=10"><div class="plabel">i_start=10</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_campanile_20.png" alt="i=20"><div class="plabel">i_start=20</div></div>
+    </div>
+  </div>
+
+  <!-- 1.7.1 -->
+  <div id="s171" class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">1.7.1</span>
+      <h3>Editing Hand-Drawn and Web Images</h3>
+    </div>
+    <p>SDEdit applied to a web photo and two hand-drawn sketches. The diffusion model projects non-realistic inputs onto the natural image manifold. Higher i_start preserves more of the original structure.</p>
+
+    <!-- Web image -->
+    <p class="sub-label">Web Image — Magnolia flowers</p>
+    <div class="source-row">
+      <div class="source-item">
+        <img src="assets/part_a/magnolia-royalty-free-image-1750196468.avif" alt="Magnolia original">
+        <div class="slabel">Source image</div>
+      </div>
+    </div>
+    <div class="prog-row">
+      <div class="prog-item"><img src="assets/part_a/a_1_7_1_web_1.png" alt="web i=1"><div class="plabel">i=1</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_1_web_3.png" alt="web i=3"><div class="plabel">i=3</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_1_web_5.png" alt="web i=5"><div class="plabel">i=5</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_1_web_7.png" alt="web i=7"><div class="plabel">i=7</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_1_web_10.png" alt="web i=10"><div class="plabel">i=10</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_1_web_20.png" alt="web i=20"><div class="plabel">i=20</div></div>
+    </div>
+
+    <!-- Hand-drawn 1 -->
+    <p class="sub-label" style="margin-top:36px;">Hand-Drawn Image 1 — Flower sketch</p>
+    <div class="source-row">
+      <div class="source-item">
+        <img src="assets/part_a/myImage.png" alt="Hand-drawn flower sketch">
+        <div class="slabel">Original sketch</div>
+      </div>
+    </div>
+    <div class="prog-row">
+      <div class="prog-item"><img src="assets/part_a/a_1_7_1_drawn1_1.png" alt="drawn1 i=1"><div class="plabel">i=1</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_1_drawn1_3.png" alt="drawn1 i=3"><div class="plabel">i=3</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_1_drawn1_5.png" alt="drawn1 i=5"><div class="plabel">i=5</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_1_drawn1_7.png" alt="drawn1 i=7"><div class="plabel">i=7</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_1_drawn1_10.png" alt="drawn1 i=10"><div class="plabel">i=10</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_1_drawn1_20.png" alt="drawn1 i=20"><div class="plabel">i=20</div></div>
+    </div>
+
+    <!-- Hand-drawn 2 -->
+    <p class="sub-label" style="margin-top:36px;">Hand-Drawn Image 2 — Star/figure sketch</p>
+    <div class="source-row">
+      <div class="source-item">
+        <img src="assets/part_a/myImage2.png" alt="Hand-drawn star sketch">
+        <div class="slabel">Original sketch</div>
+      </div>
+    </div>
+    <div class="prog-row">
+      <div class="prog-item"><img src="assets/part_a/a_1_7_1_drawn2_1.png" alt="drawn2 i=1"><div class="plabel">i=1</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_1_drawn2_3.png" alt="drawn2 i=3"><div class="plabel">i=3</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_1_drawn2_5.png" alt="drawn2 i=5"><div class="plabel">i=5</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_1_drawn2_7.png" alt="drawn2 i=7"><div class="plabel">i=7</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_1_drawn2_10.png" alt="drawn2 i=10"><div class="plabel">i=10</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_1_drawn2_20.png" alt="drawn2 i=20"><div class="plabel">i=20</div></div>
+    </div>
+  </div>
+
+  <!-- 1.7.2 -->
+  <div id="s172" class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">1.7.2</span>
+      <h3>Inpainting</h3>
+    </div>
+    <p>RePaint algorithm: start from pure noise, but at each denoising step force non-masked regions back: <code>x_t ← m·x_t + (1−m)·forward(x_orig, t)</code>. Fresh noise is sampled at each timestep to match the correct noise level.</p>
+
+    <p class="sub-label">Campanile — top of tower inpainted</p>
+    <div class="compare-grid cols3">
+      <div class="compare-item">
+        <img src="assets/part_a/a_1_7_2_original.png" alt="Original">
+        <div class="clabel">Original</div>
+      </div>
+      <div class="compare-item">
+        <img src="assets/part_a/a_1_7_2_mask.png" alt="Mask">
+        <div class="clabel">Mask (white = inpaint)</div>
+      </div>
+      <div class="compare-item">
+        <img src="assets/part_a/a_1_7_2_inpainted.png" alt="Inpainted">
+        <div class="clabel">Inpainted</div>
+      </div>
+    </div>
+
+    <p class="sub-label" style="margin-top:32px;">Own image 1 — Magnolia web photo (center masked)</p>
+    <div class="compare-grid cols3">
+      <div class="compare-item">
+        <img src="assets/part_a/magnolia-royalty-free-image-1750196468.avif" alt="Web original">
+        <div class="clabel">Original</div>
+      </div>
+      <div class="compare-item">
+        <img src="assets/part_a/a_1_7_2_mask2.png" alt="Mask 2">
+        <div class="clabel">Mask</div>
+      </div>
+      <div class="compare-item">
+        <img src="assets/part_a/a_1_7_2_inpainted2.png" alt="Inpainted 2">
+        <div class="clabel">Inpainted</div>
+      </div>
+    </div>
+
+    <p class="sub-label" style="margin-top:32px;">Own image 2 — Hand-drawn flower sketch (bottom half masked)</p>
+    <div class="compare-grid cols3">
+      <div class="compare-item">
+        <img src="assets/part_a/myImage.png" alt="Drawn original">
+        <div class="clabel">Original sketch</div>
+      </div>
+      <div class="compare-item">
+        <img src="assets/part_a/a_1_7_2_mask3.png" alt="Mask 3">
+        <div class="clabel">Mask</div>
+      </div>
+      <div class="compare-item">
+        <img src="assets/part_a/a_1_7_2_inpainted3.png" alt="Inpainted 3">
+        <div class="clabel">Inpainted</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1.7.3 -->
+  <div id="s173" class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">1.7.3</span>
+      <h3>Text-Conditional Image-to-Image Translation</h3>
+    </div>
+    <p>Same SDEdit procedure as 1.7 but guided by a strong descriptive prompt: <em>"a cinematic shot of a futuristic floating city above the ocean at sunset, ultra detailed, 4k, dramatic lighting"</em>. The model blends prompt semantics with the structural content of the Campanile. At low i_start, the prompt dominates; at high i_start, the tower structure is preserved.</p>
+    <div class="prog-row">
+      <div class="prog-item"><img src="assets/part_a/a_1_7_3_1.png" alt="i=1"><div class="plabel">i=1</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_3_3.png" alt="i=3"><div class="plabel">i=3</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_3_5.png" alt="i=5"><div class="plabel">i=5</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_3_7.png" alt="i=7"><div class="plabel">i=7</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_3_10.png" alt="i=10"><div class="plabel">i=10</div></div>
+      <div class="prog-item"><img src="assets/part_a/a_1_7_3_20.png" alt="i=20"><div class="plabel">i=20</div></div>
+    </div>
+  </div>
+
+  <!-- 1.8 -->
+  <div id="s18" class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">1.8</span>
+      <h3>Visual Anagrams</h3>
+    </div>
+    <p>At each denoising step: ε₁ = CFG(x_t, p₁), ε₂ = flip(CFG(flip(x_t), p₂)), ε = (ε₁+ε₂)/2. Averaging forces the image to simultaneously satisfy both prompts — one upright, one when rotated 180°.</p>
+
+    <p class="sub-label">Illusion 1 — Old man sketch / 1920s jazz band</p>
+    <div class="anagram-pair">
+      <div class="side">
+        <img src="assets/part_a/a_1_8_illusion1_normal.png" alt="Old man">
+        <div class="alabel">Normal view<br><em>"sketch of an old man"</em></div>
+      </div>
+      <div class="side">
+        <img src="assets/part_a/a_1_8_illusion1_flipped.png" alt="Jazz band">
+        <div class="alabel">Flipped 180°<br><em>"1920s jazz band"</em></div>
+      </div>
+    </div>
+
+    <p class="sub-label" style="margin-top:32px;">Illusion 2 — Majestic dragon / Watercolor lakeside cabin</p>
+    <div class="anagram-pair">
+      <div class="side">
+        <img src="assets/part_a/a_1_8_illusion2_normal.png" alt="Dragon">
+        <div class="alabel">Normal view<br><em>"majestic dragon over mountains"</em></div>
+      </div>
+      <div class="side">
+        <img src="assets/part_a/a_1_8_illusion2_flipped.png" alt="Cabin">
+        <div class="alabel">Flipped 180°<br><em>"watercolor lakeside cabin"</em></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1.9 -->
+  <div id="s19" class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">1.9</span>
+      <h3>Hybrid Images</h3>
+    </div>
+    <p>Factorized Diffusion: at each step, compute two CFG noise estimates ε₁ (p₁) and ε₂ (p₂), then combine: <code>ε = lowpass(ε₁) + highpass(ε₂)</code> using a Gaussian blur (kernel=33, σ=2) as the lowpass filter. The result contains low-frequency structure from p₁ and high-frequency detail from p₂ — so the perceived subject changes with viewing distance.</p>
+    <div class="img-row center">
+      <div class="img-card wide">
+        <img src="assets/part_a/a_1_9_hybrid1.png" alt="Hybrid 1">
+        <div class="cap">Low freq: "fantasy castle with waterfalls" · High freq: "butterfly on glowing flower"</div>
+      </div>
+      <div class="img-card wide">
+        <img src="assets/part_a/a_1_9_hybrid2.png" alt="Hybrid 2">
+        <div class="cap">Low freq: "cyberpunk street market" · High freq: "single candle in dark room"</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<hr class="divider">
+
+<!-- ═══════════════ PART B ═══════════════ -->
+<div id="part-b">
+<div class="container">
+
+  <div class="part-header fade-in">
+    <div class="part-label">Part B</div>
+    <h2>Flow Matching from Scratch</h2>
+    <p>Training a UNet for single-step denoising and iterative flow matching on MNIST, including time-conditioning and class-conditioning with classifier-free guidance.</p>
+  </div>
+
+  <!-- B1.1 -->
+  <div id="b11" class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">B · 1.1</span>
+      <h3>Implementing the UNet</h3>
+    </div>
+    <p>Custom UNet with the following atomic blocks:</p>
+    <ul>
+      <li><strong>Conv</strong> — Conv2d(k=3,s=1,p=1) → BatchNorm2d → GELU. Preserves spatial dims, changes channels.</li>
+      <li><strong>DownConv</strong> — Conv2d(k=3,s=2,p=1) → BN → GELU. Downsamples by 2.</li>
+      <li><strong>UpConv</strong> — ConvTranspose2d(k=4,s=2,p=1) → BN → GELU. Upsamples by 2.</li>
+      <li><strong>Flatten</strong> — AvgPool2d(7) collapses 7×7 → 1×1.</li>
+      <li><strong>Unflatten</strong> — ConvTranspose2d(k=7,s=1,p=0) expands 1×1 → 7×7.</li>
+      <li><strong>Concat</strong> — Channel-wise skip connections via torch.cat().</li>
+    </ul>
+    <p style="margin-top:8px;">Composed into <strong>ConvBlock</strong> (Conv→Conv), <strong>DownBlock</strong> (ConvBlock→DownConv), and <strong>UpBlock</strong> (UpConv→ConvBlock). Hidden dim D=128 for Part 1, D=64 for Part 2.</p>
+  </div>
+
+  <!-- B1.2 -->
+  <div id="b12" class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">B · 1.2</span>
+      <h3>Training a Single-Step Denoiser</h3>
+    </div>
+
+    <p style="margin-bottom:12px;">Noising process <code>z = x + σ·ε</code>, ε ∼ N(0,I), at σ ∈ {0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0}. As σ increases the digit becomes progressively unrecognizable:</p>
+    <img src="assets/part_b/part1_noising_visualization.png" alt="Noising visualization" class="curve-img">
+
+    <p class="sub-label" style="margin-top:24px;">Training — σ=0.5, 5 epochs, D=128, lr=1e-4, batch=256, Adam optimizer</p>
+    <img src="assets/part_b/part1_training_curve.png" alt="Training curve" class="curve-img">
+
+    <p style="margin-top:20px; margin-bottom:12px; color:var(--text); font-size:12px;">Denoising results on test set (rows: clean / noisy σ=0.5 / denoised) — epoch 1 and epoch 5:</p>
+    <div class="epoch-grid" style="grid-template-columns: repeat(2, 1fr);">
+      <div class="epoch-card">
+        <img src="assets/part_b/part1_denoising_epoch1.png" alt="Epoch 1">
+        <div class="ecap">Epoch 1</div>
+      </div>
+      <div class="epoch-card">
+        <img src="assets/part_b/part1_denoising_epoch5.png" alt="Epoch 5">
+        <div class="ecap">Epoch 5</div>
+      </div>
+    </div>
+
+    <p class="sub-label" style="margin-top:28px;">Out-of-distribution testing — σ=0.5 model applied at σ ∈ {0.0 … 1.0}</p>
+    <img src="assets/part_b/part1_ood_testing.png" alt="OOD testing" class="curve-img">
+    <div class="callout">
+      At σ=0.0 (no noise) the model over-smooths the already-clean image. At σ=0.5 (trained level) it recovers digits well. At σ=1.0 it struggles to reconstruct — it was never trained to denoise this level of corruption.
+    </div>
+
+    <p class="sub-label" style="margin-top:28px;">Part 1.2.3 — Denoising pure Gaussian noise (σ=∞): training loss</p>
+    <img src="assets/part_b/part1_pure_noise_curve.png" alt="Pure noise curve" class="curve-img">
+
+    <p style="margin-top:16px; margin-bottom:12px; color:var(--text); font-size:12px;">Generated from pure noise — epoch 1 and epoch 5:</p>
+    <div class="epoch-grid" style="grid-template-columns: repeat(2, 1fr);">
+      <div class="epoch-card">
+        <img src="assets/part_b/part1_pure_noise_epoch1.png" alt="Pure noise epoch 1">
+        <div class="ecap">Epoch 1</div>
+      </div>
+      <div class="epoch-card">
+        <img src="assets/part_b/part1_pure_noise_epoch5.png" alt="Pure noise epoch 5">
+        <div class="ecap">Epoch 5</div>
+      </div>
+    </div>
+    <div class="callout">
+      <strong>Analysis:</strong> With MSE loss on pure Gaussian noise inputs, the model learns E[x|z] — the conditional expectation given the noise. Since z carries no digit-specific information, this expectation collapses to the mean across all training images: a blurry, averaged blend of all MNIST digits. The model converges to the centroid of the training distribution — ghostly, indistinct digit-like shapes — rather than learning to generate sharp, specific digits. This is the fundamental limitation of one-step MSE-based generation.
+    </div>
+  </div>
+
+  <!-- B2.1 -->
+  <div id="b21" class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">B · 2.1–2.3</span>
+      <h3>Time-Conditioned UNet &amp; Flow Matching</h3>
+    </div>
+    <p>Flow matching interpolates between noise x₀ ∼ N(0,I) and data x₁: <code>x_t = (1−t)x₀ + tx₁</code>. The target flow (velocity) is <code>u = x₁−x₀</code>. We train: <code>L = E‖(x₁−x₀) − u_θ(x_t,t)‖²</code>.</p>
+    <p style="margin-top:8px;">Time t ∈ [0,1] is injected via two FCBlocks (Linear→GELU→Linear→GELU): <code>unflatten = unflatten × t₁</code>, <code>up1 = up1 × t₂</code>. Sampling uses Euler integration: <code>x ← x + u_θ(x,t)·dt</code> for 50 steps.</p>
+    <p style="margin-top:8px;">Hyperparameters: D=64, lr=1e-2, batch=64, 10 epochs, ExponentialLR scheduler (γ=0.1^(1/10)).</p>
+
+    <p class="sub-label" style="margin-top:20px;">Training loss — time-conditioned UNet</p>
+    <img src="assets/part_b/part2_tc_training_curve.png" alt="TC training curve" class="curve-img">
+
+    <p style="margin-top:20px; margin-bottom:12px; color:var(--text); font-size:12px;">16 samples via Euler integration (50 steps) at epochs 1, 5, 10:</p>
+    <div class="epoch-grid">
+      <div class="epoch-card">
+        <img src="assets/part_b/fm_samples/part2_tc_epoch1.png" alt="TC epoch 1">
+        <div class="ecap">Epoch 1</div>
+      </div>
+      <div class="epoch-card">
+        <img src="assets/part_b/fm_samples/part2_tc_epoch5.png" alt="TC epoch 5">
+        <div class="ecap">Epoch 5</div>
+      </div>
+      <div class="epoch-card">
+        <img src="assets/part_b/fm_samples/part2_tc_epoch10.png" alt="TC epoch 10">
+        <div class="ecap">Epoch 10</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- B2.4 -->
+  <div id="b22" class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">B · 2.4–2.6</span>
+      <h3>Class-Conditioned UNet with CFG</h3>
+    </div>
+    <p>Class conditioning adds two more FCBlocks for one-hot class vector c ∈ ℝ¹⁰. Modulation: <code>unflatten = c₁·unflatten + t₁</code>, <code>up1 = c₂·up1 + t₂</code>. During training, condition is dropped with probability p_uncond=0.1 (set c=0) to enable classifier-free guidance.</p>
+    <p style="margin-top:8px;">At sampling: <code>u_cfg = u_uncond + γ(u_cond − u_uncond)</code> with γ=5. 300 Euler steps during training, 50 at inference.</p>
+
+    <p class="sub-label" style="margin-top:20px;">Training loss — class-conditioned UNet</p>
+    <img src="assets/part_b/part2_cc_training_curve.png" alt="CC training curve" class="curve-img">
+
+    <p style="margin-top:20px; margin-bottom:12px; color:var(--text); font-size:12px;">4 samples per digit (0–9), CFG γ=5 — epochs 1, 5, 10:</p>
+    <div class="epoch-grid">
+      <div class="epoch-card">
+        <img src="assets/part_b/cc_samples/part2_cc_epoch1.png" alt="CC epoch 1">
+        <div class="ecap">Epoch 1</div>
+      </div>
+      <div class="epoch-card">
+        <img src="assets/part_b/cc_samples/part2_cc_epoch5.png" alt="CC epoch 5">
+        <div class="ecap">Epoch 5</div>
+      </div>
+      <div class="epoch-card">
+        <img src="assets/part_b/cc_samples/part2_cc_epoch10.png" alt="CC epoch 10">
+        <div class="ecap">Epoch 10</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bells & Whistles -->
+  <div id="b23" class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">B · Bells &amp; Whistles</span>
+      <h3>Training Without LR Scheduler</h3>
+    </div>
+    <p>The exponential scheduler (γ=0.1^(1/10)) decays lr from 1e-2 to ~1e-3 over 10 epochs, preventing late-stage oscillations. To compensate for its removal, we use a constant lr=1e-3 from the start — Adam's adaptive per-parameter rates then provide implicit stabilization comparable to the scheduled run.</p>
+
+    <p style="margin-top:16px; margin-bottom:12px; color:var(--text); font-size:12px;">Class-conditioned samples after 10 epochs — no scheduler, constant LR=1e-3:</p>
+    <div class="epoch-grid" style="grid-template-columns: 1fr;">
+      <div class="epoch-card">
+        <img src="assets/part_b/part2_cc_no_scheduler.png" alt="No scheduler">
+        <div class="ecap">No LR scheduler · LR=1e-3 · 10 epochs · comparable digit quality to scheduled training</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<footer>
+  COMS 4732W Computer Vision 2 &nbsp;·&nbsp; HW5: Diffusion Models &amp; Flow Matching &nbsp;·&nbsp; Spring 2026 &nbsp;·&nbsp; Sriya Rallabandi · sr4326
+</footer>
+
+<script>
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
